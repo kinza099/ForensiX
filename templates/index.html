@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForensiX — Digital Forensics & Incident Response Platform</title>
+  <link rel="stylesheet" href="/static/css/forensix.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- ==========================================================================
+       1. TOP GLOBAL NAVBAR (Spanning 100% Width Above All Panels)
+       ========================================================================== -->
+  <header class="top-nav-bar">
+    <div class="nav-left">
+      <!-- Sidebar Collapse Toggle Button -->
+      <button class="btn-sidebar-collapse" title="Collapse / Expand Sidebar" onclick="ForensiXApp.toggleSidebar()">
+        <svg id="collapse-icon" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+        </svg>
+      </button>
+
+      <!-- Brand Logo & Platform Title -->
+      <a href="javascript:void(0)" class="nav-brand-link" onclick="ForensiXApp.navigate('dashboard')">
+        <div class="brand-icon-box">FX</div>
+        <div class="brand-text-box">
+          <div class="brand-title-text">FORENSI<span>X</span></div>
+          <div class="brand-sub-text">Digital Forensics</div>
+        </div>
+      </a>
+
+      <div class="nav-divider"></div>
+
+      <!-- Case Cockpit Dropdown Selector -->
+      <div class="case-cockpit">
+        <svg class="cockpit-icon" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
+        <span class="case-cockpit-label">TARGET CASE:</span>
+        <select id="case-select-dropdown" class="case-select-dropdown" onchange="ForensiXApp.switchCase(this.value)">
+          <option value="">Loading cases...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Center Global Forensic Search -->
+    <div class="nav-center">
+      <div class="search-box-wrapper">
+        <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" id="global-search-input" placeholder="Search hash, IP, IOC, evidence, artifacts..." autocomplete="off">
+        <div id="search-results-dropdown" class="search-results-dropdown" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- Right Controls: Telemetry Clock, Quick Actions, Profile & Tools -->
+    <div class="nav-right">
+      <!-- Digital Clock Ticker -->
+      <div class="clock-ticker" title="Coordinated Universal Time (UTC)">
+        <div class="clock-dot"></div>
+        <span id="hud-clock">2026-10-02 08:45:00 UTC</span>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="nav-action-buttons">
+        <button class="btn btn-secondary btn-sm" onclick="ForensiXApp.showNewCaseModal()" title="Create New Case">+ New Case</button>
+        <button class="btn btn-primary btn-sm" onclick="ForensiXApp.showUploadEvidenceModal()" title="Upload & Hash Evidence">+ Add Evidence</button>
+        <button class="btn btn-secondary btn-sm" onclick="ForensiXApp.seedDemoCase()" title="Reset Sample Scenario">Reset Demo</button>
+      </div>
+
+      <div class="nav-divider"></div>
+
+      <!-- Logged-in Examiner Badge -->
+      <div class="nav-user-pill" title="Current Investigator Session">
+        <div id="sidebar-user-avatar" class="nav-user-avatar">AV</div>
+        <div class="nav-user-details">
+          <span id="sidebar-user-name" class="nav-user-name">Alex Vance</span>
+          <span id="sidebar-user-role" class="nav-user-role">Investigator</span>
+        </div>
+      </div>
+
+      <!-- Theme & Session Tool Buttons -->
+      <div class="nav-icon-group">
+        <button class="btn-icon" title="Toggle Dark / Light Theme" onclick="ForensiXApp.toggleTheme()">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+        <button class="btn-icon btn-logout" title="Terminate Session & Logout" onclick="ForensiXApp.logout()">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==========================================================================
+       2. WORKSPACE BODY (Panels Under the Global Top Navbar)
+       ========================================================================== -->
+  <div class="app-body">
+    <!-- COLLAPSIBLE SIDEBAR NAVIGATION -->
+    <aside id="app-sidebar" class="sidebar">
+      <div class="sidebar-nav-container">
+        <!-- ALWAYS VISIBLE HIGH-CONTRAST CASE REGISTRY -->
+        <div class="nav-group-title">Primary Registry</div>
+        <div class="nav-item highlight-registry" data-view="cases" onclick="ForensiXApp.navigate('cases')" title="Case Registry">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <span>Case Registry</span>
+          <span id="dock-count-cases" class="nav-badge" style="background: rgba(245, 158, 11, 0.25); color: #fbbf24;">1</span>
+        </div>
+
+        <div class="nav-group-title">Investigation Console</div>
+        <div class="nav-item active" data-view="dashboard" onclick="ForensiXApp.navigate('dashboard')" title="Case Dashboard">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+          </svg>
+          <span>Case Dashboard</span>
+        </div>
+
+        <div class="nav-group-title">Evidence & Triage</div>
+        <div class="nav-item" data-view="evidence" onclick="ForensiXApp.navigate('evidence')" title="Evidence Vault">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span>Evidence Vault</span>
+          <span id="dock-count-evidence" class="nav-badge">-</span>
+        </div>
+        <div class="nav-item" data-view="suspicious" onclick="ForensiXApp.navigate('suspicious')" title="Suspicious Artifacts">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span>Suspicious Artifacts</span>
+          <span id="dock-count-suspicious" class="nav-badge">-</span>
+        </div>
+        <div class="nav-item" data-view="browser" onclick="ForensiXApp.navigate('browser')" title="Browser Artifacts">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+          </svg>
+          <span>Browser Artifacts</span>
+        </div>
+        <div class="nav-item" data-view="logs" onclick="ForensiXApp.navigate('logs')" title="Forensic Logs">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+          </svg>
+          <span>Forensic Logs</span>
+        </div>
+
+        <div class="nav-group-title">Analysis & Correlation</div>
+        <div class="nav-item" data-view="timeline" onclick="ForensiXApp.navigate('timeline')" title="Timeline Stream">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Timeline Stream</span>
+          <span id="dock-count-timeline" class="nav-badge">-</span>
+        </div>
+        <div class="nav-item" data-view="graph" onclick="ForensiXApp.navigate('graph')" title="Relationship Graph">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+          <span>Relationship Graph</span>
+        </div>
+        <div class="nav-item" data-view="indicators" onclick="ForensiXApp.navigate('indicators')" title="Indicators (IOCs)">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+          </svg>
+          <span>Indicators (IOCs)</span>
+          <span id="dock-count-indicators" class="nav-badge">-</span>
+        </div>
+        <div class="nav-item" data-view="findings" onclick="ForensiXApp.navigate('findings')" title="Case Findings">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+          </svg>
+          <span>Case Findings</span>
+          <span id="dock-count-findings" class="nav-badge">-</span>
+        </div>
+
+        <div class="nav-group-title">Telemetry & Deliverables</div>
+        <div class="nav-item" data-view="visualization" onclick="ForensiXApp.navigate('visualization')" title="Visual Analytics">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+          </svg>
+          <span>Visual Analytics</span>
+        </div>
+        <div class="nav-item" data-view="custody" onclick="ForensiXApp.navigate('custody')" title="Chain of Custody">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          <span>Chain of Custody</span>
+        </div>
+        <div class="nav-item" data-view="examiner" onclick="ForensiXApp.navigate('examiner')" title="Senior Investigation">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          <span>Senior Investigation</span>
+        </div>
+        <div class="nav-item" data-view="reports" onclick="ForensiXApp.navigate('reports')" title="PDF Reports">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+          </svg>
+          <span>PDF Reports</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE WRAPPER -->
+    <div class="main-wrapper">
+      <!-- ACTIVE CASE HERO BANNER -->
+      <section id="case-hero-banner" class="active-case-hero">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <span id="hero-case-num" class="hero-case-num">FL-2026-001</span>
+          <div>
+            <div id="hero-case-title" class="hero-title-box">
+              Loading Target Case...
+            </div>
+            <div id="hero-case-meta" class="hero-details-row">
+              <span>Lead: <b id="hero-case-investigator">-</b></span>
+              <span>Priority: <span id="hero-case-priority" class="badge badge-critical">Critical</span></span>
+              <span>Status: <span id="hero-case-status" class="badge badge-normal">Active</span></span>
+              <span>Category: <b id="hero-case-category">-</b></span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn btn-secondary btn-sm" onclick="ForensiXApp.showEditCaseModal(ForensiXApp.state.currentCaseId)">✏️ Edit Case</button>
+          <button class="btn btn-danger btn-sm" onclick="ForensiXApp.confirmDeleteCase(ForensiXApp.state.currentCaseId)">🗑️ Delete Case</button>
+          <button class="btn btn-primary btn-sm" onclick="ForensiXApp.generateReportNow()">📄 Generate Forensic PDF</button>
+        </div>
+      </section>
+
+      <!-- SCROLLABLE VIEWPORT CONTENT -->
+      <main id="view-content" class="view-workspace">
+        <div class="loading-indicator">
+          <div class="spinner"></div> Initializing forensic console...
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     SLIDE-OUT EVIDENCE INSPECTOR DRAWER
+     ========================================================================== -->
+<div id="drawer-backdrop" class="drawer-backdrop" onclick="ForensiXApp.closeDrawer()"></div>
+<div id="evidence-drawer" class="drawer-panel">
+  <div class="drawer-header">
+    <div class="drawer-title">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <span id="drawer-evidence-title">Evidence Inspector</span>
+    </div>
+    <button class="btn-icon" onclick="ForensiXApp.closeDrawer()">&times;</button>
+  </div>
+  <div id="drawer-content" class="drawer-body">
+    <!-- Populated dynamically by inspectEvidence() -->
+  </div>
+</div>
+
+<!-- ==========================================================================
+     MODALS
+     ========================================================================== -->
+
+<!-- 1. LOGIN MODAL -->
+<div id="login-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title">ForensiX Secure Investigator Login</div>
+    </div>
+    <form onsubmit="event.preventDefault(); ForensiXApp.login(document.getElementById('login-username').value, document.getElementById('login-password').value);">
+      <div class="modal-body">
+        <div style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-xs); padding: 10px; margin-bottom: 14px; font-size: 12px; color: var(--accent-primary-hover);">
+          <b>Authorized Examiner Verification:</b> Default credentials provided for evaluation: Username: <code>investigator</code> / Password: <code>forensix2026</code>.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Investigator Username</label>
+          <input type="text" id="login-username" class="form-control" value="investigator" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="login-password" class="form-control" value="forensix2026" required />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Authenticate & Access Console</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 2. UPLOAD EVIDENCE MODAL -->
+<div id="upload-evidence-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title">+ Add / Import Forensic Evidence</div>
+      <button class="btn-icon" onclick="ForensiXApp.closeModal('upload-evidence-modal')">&times;</button>
+    </div>
+    <form id="form-upload-evidence">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Select Evidence File (Documents, Logs, Executables, Browser Exports, Archives)</label>
+          <input type="file" name="file" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Evidence Label / Name (Optional)</label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. suspicious_updater.exe" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category Override</label>
+          <select name="category" class="form-control">
+            <option value="">Auto-Detect from Magic Header & Extension</option>
+            <option value="Documents">Documents</option>
+            <option value="Images">Images</option>
+            <option value="Executables">Executables</option>
+            <option value="Scripts">Scripts</option>
+            <option value="Logs">Logs</option>
+            <option value="Browser Artifacts">Browser Artifacts</option>
+            <option value="Archives">Archives</option>
+            <option value="Configuration Files">Configuration Files</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Acquired Original Location / Path</label>
+          <input type="text" name="original_location" class="form-control" placeholder="e.g. C:\Users\jdoe\AppData\Local\Temp" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Acquisition Source / Description</label>
+          <textarea name="description" class="form-control" placeholder="Describe collection conditions, write blocker used, hardware source..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="ForensiXApp.closeModal('upload-evidence-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Import & Calculate Hashes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 3. NEW CASE MODAL -->
+<div id="new-case-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title">+ Initialize New Forensic Case</div>
+      <button class="btn-icon" onclick="ForensiXApp.closeModal('new-case-modal')">&times;</button>
+    </div>
+    <form id="form-new-case">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Case Name</label>
+          <input type="text" id="new-case-name" class="form-control" placeholder="e.g. Executive Workstation Ransomware Incident" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Investigation Category</label>
+          <select id="new-case-category" class="form-control">
+            <option value="Corporate Espionage">Corporate Espionage</option>
+            <option value="Data Exfiltration & Unauthorized Access">Data Exfiltration & Unauthorized Access</option>
+            <option value="Malware & Ransomware Outbreak">Malware & Ransomware Outbreak</option>
+            <option value="Insider Threat">Insider Threat</option>
+            <option value="Financial Fraud">Financial Fraud</option>
+            <option value="General Digital Forensics">General Digital Forensics</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority Level</label>
+          <select id="new-case-priority" class="form-control">
+            <option value="Critical">Critical</option>
+            <option value="High" selected>High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Case Objectives & Scope</label>
+          <textarea id="new-case-desc" class="form-control" placeholder="Document the triggering incident alert, initial indicators, and authorized scope..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="ForensiXApp.closeModal('new-case-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Case Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 4. EDIT CASE MODAL (UPDATE) -->
+<div id="edit-case-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title">✏️ Edit Case Information</div>
+      <button class="btn-icon" onclick="ForensiXApp.closeModal('edit-case-modal')">&times;</button>
+    </div>
+    <form id="form-edit-case">
+      <input type="hidden" id="edit-case-id" />
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Case Name</label>
+          <input type="text" id="edit-case-name" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="edit-case-status" class="form-control">
+            <option value="Open">Open</option>
+            <option value="Under Investigation">Under Investigation</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Completed">Completed</option>
+            <option value="Archived">Archived</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select id="edit-case-priority" class="form-control">
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select id="edit-case-category" class="form-control">
+            <option value="Corporate Espionage">Corporate Espionage</option>
+            <option value="Data Exfiltration & Unauthorized Access">Data Exfiltration & Unauthorized Access</option>
+            <option value="Malware & Ransomware Outbreak">Malware & Ransomware Outbreak</option>
+            <option value="Insider Threat">Insider Threat</option>
+            <option value="Financial Fraud">Financial Fraud</option>
+            <option value="General Digital Forensics">General Digital Forensics</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Investigator</label>
+          <input type="text" id="edit-case-investigator" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Case Description & Objectives</label>
+          <textarea id="edit-case-desc" class="form-control"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="ForensiXApp.closeModal('edit-case-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 5. DELETE CASE CONFIRMATION MODAL -->
+<div id="delete-case-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title" style="color: var(--accent-coral);">⚠️ Confirm Case Deletion</div>
+      <button class="btn-icon" onclick="ForensiXApp.closeModal('delete-case-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 13px; margin-bottom: 12px;">Are you sure you want to permanently delete this forensic case?</p>
+      <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: var(--radius-xs); padding: 12px; margin-bottom: 12px;">
+        <div id="delete-case-details" style="font-family: var(--font-mono); font-size: 12px; color: #fb7185;"></div>
+      </div>
+      <p style="font-size: 11.5px; color: var(--text-muted);">
+        <b>Notice:</b> This action will permanently remove all associated evidence records, hashes, timeline events, extracted indicators, and custody ledgers for this case.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="ForensiXApp.closeModal('delete-case-modal')">Cancel</button>
+      <button type="button" class="btn btn-danger" onclick="ForensiXApp.executeDeleteCase()">Yes, Delete Case</button>
+    </div>
+  </div>
+</div>
+
+<!-- 6. NEW FINDING MODAL -->
+<div id="new-finding-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title">+ Log Formal Investigation Finding</div>
+      <button class="btn-icon" onclick="ForensiXApp.closeModal('new-finding-modal')">&times;</button>
+    </div>
+    <form id="form-new-finding">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Finding Title</label>
+          <input type="text" id="finding-title" class="form-control" placeholder="e.g. Credential Dumping via LSASS Memory Injection" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severity Level</label>
+          <select id="finding-severity" class="form-control">
+            <option value="Critical">Critical</option>
+            <option value="High" selected>High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+            <option value="Informational">Informational</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Finding Description</label>
+          <textarea id="finding-desc" class="form-control" placeholder="Detailed technical forensic explanation..." required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Explainable Evidentiary Basis</label>
+          <textarea id="finding-basis" class="form-control" placeholder="Correlated evidence numbers, timeline events, or log records that prove this finding..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="ForensiXApp.closeModal('new-finding-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Record Finding</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 7. HASH COMPARISON TOOL MODAL -->
+<div id="hash-compare-modal" class="modal-backdrop">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-title">Cryptographic Hash Comparison Tool</div>
+      <button class="btn-icon" onclick="ForensiXApp.closeModal('hash-compare-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Hash A (Baseline / Known Evidence Hash)</label>
+        <input type="text" id="compare-hash-a" class="form-control mono-cell" placeholder="Enter MD5, SHA-1, or SHA-256..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hash B (Comparison Candidate Hash)</label>
+        <input type="text" id="compare-hash-b" class="form-control mono-cell" placeholder="Enter candidate hash to verify match..." />
+      </div>
+      <div id="compare-hash-result" style="display: none; padding: 12px; border-radius: 4px; border: 1px solid transparent; font-size: 12.5px; margin-top: 10px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="ForensiXApp.closeModal('hash-compare-modal')">Close</button>
+      <button type="button" class="btn btn-primary" onclick="ForensiXApp.compareHashesAction()">Run Hash Comparison</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- SCRIPTS -->
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/graph.js"></script>
+<script src="/static/js/timeline.js"></script>
+<script src="/static/js/app.js"></script>
+
+</body>
+</html>
